@@ -17,12 +17,14 @@ import requests
 
 """
 TO DO:
+6 -> 2 -> 5 -> 4 -> 3 -> 2 -> scrape factsheet -> 1
+Talk with P'Sunny on 6, 2, where to run
 1. run()
-2. read metadata from ____
+2. save to ____
 3. get security_id for new stock
 4. read metadata from ____
 5. check new stock that is not in metadata
-6. 
+6. get SET data (company metadata, margin, etc.)
 """
 
 class SetSmart:

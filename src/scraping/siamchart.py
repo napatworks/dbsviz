@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 import numpy as np
 import datetime as dt
@@ -85,7 +86,7 @@ def run_scraping_job():
     ## TODO: add config file for username/password/credential
 
     ## Initialize app
-    cred = credentials.Certificate('/Users/sunny/Github/dbsviz/sunny/dbsweb-secret.json')
+    cred = credentials.Certificate('../../credential/dbsweb-secret.json')
     firebase_admin.initialize_app(cred, {
         'storageBucket': 'dbsweb-f2346.appspot.com'
     })
@@ -101,8 +102,12 @@ def run_scraping_job():
     output_dir = 'data/raw/siamchart/' + today_str + '/'
 
     ## login
+
+    cred_siamchart = json.load(open('../../credential/credential.json', 'r'))
+    username = cred_siamchart['SIAMCHART']['USERNAME']
+    password = cred_siamchart['SIAMCHART']['PASSWORD']
     ss = SiamChartScraper()
-    ss.login_to_siamchart(username='vodkaman', password='Prospect4K')
+    ss.login_to_siamchart(username=username, password=password)
 
     # set for-loop for loading
     num_round = 0
@@ -127,7 +132,7 @@ def run_scraping_job():
                     # Try relogin in case of session timeout
                     if num_quarter <= 5 and not try_relogin:
                         try:
-                            ss.login_to_siamchart(username='vodkaman', password='Prospect4K')
+                            ss.login_to_siamchart(username=username, password=password)
                         except:
                             print(ticker, ': log in not successful, still in login session')
                         try_relogin = True

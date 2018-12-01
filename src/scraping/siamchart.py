@@ -1,12 +1,18 @@
 import pandas as pd
 import numpy as np
+import datetime as dt
 import time
+from io import StringIO
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.support import expected_conditions as EC
+
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import storage
 
 DEFAULT_CHROME_DRIVER_DIR = '/usr/local/bin/chromedriver_v2.38'
 SIAMCHART_URL = 'http://siamchart.com/stock-info/'
@@ -74,3 +80,76 @@ class SiamChartScraper:
             return table_list[SIAMCHART_FINANCIAL_TABLE]
         else:
             return None
+
+def run_scraping_job():
+    ## TODO: add config file for username/password/credential
+
+    ## Initialize app
+    cred = credentials.Certificate('/Users/sunny/Github/dbsviz/sunny/dbsweb-secret.json')
+    firebase_admin.initialize_app(cred, {
+        'storageBucket': 'dbsweb-f2346.appspot.com'
+    })
+    bucket = storage.bucket()
+
+    ## set ticker and
+    blob = bucket.blob('data/process/set_website/metadata/20181127/metadata.csv')
+    meta_table_str = blob.download_as_string().decode('utf-8')
+    df_meta = pd.read_csv(StringIO(meta_table_str), sep='|')
+    tickers = list(df_meta['symbol'].unique())
+
+    today_str = dt.date.today().strftime(format='%Y%m%d')
+    output_dir = 'data/raw/siamchart/' + today_str + '/'
+
+    ## login
+    ss = SiamChartScraper()
+    ss.login_to_siamchart(username='vodkaman', password='Prospect4K')
+
+    # set for-loop for loading
+    num_round = 0
+    tickers_loaded = []
+    tickers_left = list(tickers)
+    bad_tickers = set()
+    while len(tickers_left) > 0 and num_round < 10:
+        for ticker in tickers_left:
+            try:
+                try_relogin = False
+                while True:
+                    # Loading data from
+                    print(ticker, ': Loading data for ', ticker)
+                    page_source = ss.get_page_source(ticker)
+                    table_list = ss.get_table_list(page_source)
+                    df_financial = ss.get_financial_statement_table(page_source)
+                    num_quarter = len(df_financial.columns)
+                    print(ticker, ': Done for ticker ', ticker)
+                    print(ticker, ': Number of tables ', len(table_list))
+                    print(ticker, ': Number of quarters ', num_quarter)
+
+                    # Try relogin in case of session timeout
+                    if num_quarter <= 5 and not try_relogin:
+                        try:
+                            ss.login_to_siamchart(username='vodkaman', password='Prospect4K')
+                        except:
+                            print(ticker, ': log in not successful, still in login session')
+                        try_relogin = True
+                        time.sleep(0.5 + 0.5 * np.random.rand())
+                        print(ticker, ": relogin and reload the data ... ")
+                    else:
+                        break
+
+                # save ps to storage
+                blob = bucket.blob(output_dir + ticker.lower())
+                blob.upload_from_string(page_source.encode('utf-8'))
+                print(ticker, ': Successfully upload file to cloud storage')
+
+                tickers_loaded.append(ticker)
+
+            except:
+                print(ticker, ': Error loading information for ticker ', ticker)
+                bad_tickers.add(ticker)
+
+        tickers_left = sorted(set(tickers_left) - set(tickers_loaded))
+        num_round += 1
+
+if __name__ =='__main__':
+    run_scraping_job()
+

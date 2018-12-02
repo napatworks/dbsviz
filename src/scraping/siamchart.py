@@ -22,7 +22,7 @@ SIAMCHART_DIVIDEND_TABLE = 1
 SIAMCHART_FINANCIAL_TABLE = 3
 SIAMCHART_SPLIT_TABLE = 2
 
-class SiamChartScraper:
+class SiamchartScraper:
     """ data reader for the siam chart site.
     """
 
@@ -83,7 +83,6 @@ class SiamChartScraper:
             return None
 
 def run_scraping_job():
-    ## TODO: add config file for username/password/credential
 
     ## Initialize app
     cred = credentials.Certificate('../../credential/dbsweb-secret.json')
@@ -106,7 +105,7 @@ def run_scraping_job():
     cred_siamchart = json.load(open('../../credential/credential.json', 'r'))
     username = cred_siamchart['SIAMCHART']['USERNAME']
     password = cred_siamchart['SIAMCHART']['PASSWORD']
-    ss = SiamChartScraper()
+    ss = SiamchartScraper()
     ss.login_to_siamchart(username=username, password=password)
 
     # set for-loop for loading

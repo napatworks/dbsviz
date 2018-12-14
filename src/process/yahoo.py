@@ -19,8 +19,9 @@ class Yahoo:
     def __init__(self, firebase_credential_path="../../credential/dbsweb-secret.json",
                  bucket="dbsweb-f2346.appspot.com"):
         # Initializing
-        cred = credentials.Certificate(firebase_credential_path)
-        firebase_admin.initialize_app(cred, {"storageBucket": bucket})
+        if (not len(firebase_admin._apps)):
+            cred = credentials.Certificate(firebase_credential_path)
+            firebase_admin.initialize_app(cred, {"storageBucket": bucket})
 
     def _read_gcs(self, file_name, data_type, file_type, firebase_dir="data/raw/yahoo/"):
 
@@ -77,8 +78,8 @@ class Yahoo:
         self._check_and_delete_old_file("price_data.csv")
 
 
-def run():
-    processor = Yahoo()
+def run(firebase_credential_path="../../credential/dbsweb-secret.json", bucket="dbsweb-f2346.appspot.com"):
+    processor = Yahoo(firebase_credential_path=firebase_credential_path, bucket=bucket)
     processor.process_price_data()
 
 

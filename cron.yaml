@@ -1,0 +1,5 @@
+cron:
+- description: "daily scraping tasks"
+  url: /daily
+  schedule: every monday,tuesday,wednesday,thursday,friday 19:00
+  timezone: Asia/Bangkok

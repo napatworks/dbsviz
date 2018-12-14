@@ -24,10 +24,11 @@ class Yahoo:
     """
     def __init__(self, firebase_credential_path = "../../credential/dbsweb-secret.json", bucket = "dbsweb-f2346.appspot.com"):
         # Initializing
-        cred = credentials.Certificate(firebase_credential_path)
-        firebase_admin.initialize_app(cred, {
-               "storageBucket": bucket
-           })
+        if (not len(firebase_admin._apps)):
+            cred = credentials.Certificate(firebase_credential_path)
+            firebase_admin.initialize_app(cred, {
+                   "storageBucket": bucket
+               })
 
     def _read_gcs(self, file_name, data_type, file_type, firebase_dir="data/raw/yahoo/"):
 
@@ -159,8 +160,8 @@ class Yahoo:
         self._upload_file("tmp_yahoo_error.json", "price_error_list.json", "price", firebase_dir="data/raw/yahoo/")
         self._check_and_delete_old_file("tmp_yahoo_error.json")
 
-def run():
-    scraper = Yahoo()
+def run(firebase_credential_path = "../../credential/dbsweb-secret.json", bucket = "dbsweb-f2346.appspot.com"):
+    scraper = Yahoo(firebase_credential_path = firebase_credential_path, bucket = bucket)
     scraper.scrape()
 
 if __name__ == "__main__":

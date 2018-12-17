@@ -20,6 +20,8 @@ def index():
 
 @app.route("/daily")
 def run():
+    print("Start daily scraping task")
+
     # Parameters
     chrome_driver_dir = "tools/chromedriver"
     download_dir = ""
@@ -27,9 +29,14 @@ def run():
     bucket = "dbsweb-f2346.appspot.com"
 
     # Get metadata
+    print("Getting SET data")
     s_set_website.run(chrome_driver_dir=chrome_driver_dir, download_dir=download_dir,
                       firebase_credential_path=firebase_credential_path, bucket=bucket)
+    print("Finishing scrape SET data")
+    
+    print("Getting YAHOO data")
     p_set_website.run(firebase_credential_path=firebase_credential_path, bucket=bucket)
+    print("Finishing scrape YAHOO data")
 
     # Get Yahoo price data
     s_yahoo.run(firebase_credential_path=firebase_credential_path, bucket=bucket)
@@ -37,4 +44,4 @@ def run():
     return "Finish daily task"
 
 if __name__ == "__main__":
-	app.run(host='0.0.0.0')
+	app.run(host='0.0.0.0', port=8080)

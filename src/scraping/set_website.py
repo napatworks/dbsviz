@@ -1,5 +1,6 @@
 # Scraping tools
 from selenium import webdriver
+import urllib.request
 
 # Data management tools
 import pandas as pd
@@ -28,9 +29,25 @@ class Set:
         # INITIALIZING CHROME
         option = webdriver.ChromeOptions()
         option.add_argument(" — incognito")
+        option.add_argument('--headless')
+        option.add_argument('--no-sandbox')
+        option.add_argument('--disable-dev-shm-usage')
         prefs = {'download.default_directory': self.download_dir}
         option.add_experimental_option('prefs', prefs)
         self.browser = webdriver.Chrome(self.chrome_driver_dir, chrome_options=option)
+
+        self.browser.command_executor._commands["send_command"] = ("POST", '/session/$sessionId/chromium/send_command')
+        params = {'cmd': 'Page.setDownloadBehavior', 'params': {'behavior': 'allow', 'downloadPath': "/path/to/download/dir"}}
+        command_result = self.browser.execute("send_command", params)
+
+
+        # profile = webdriver.FirefoxProfile()
+        # profile.set_preference("browser.download.folderList", 2)
+        # profile.set_preference("browser.download.manager.showWhenStarting", False)
+        # profile.set_preference("browser.download.dir", '')
+        # profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/x-gzip")
+
+        # self.browser = webdriver.Firefox(chrome_driver_dir, firefox_profile=profile)
 
         if (not len(firebase_admin._apps)):
             cred = credentials.Certificate(firebase_credential_path)
@@ -60,11 +77,12 @@ class Set:
         Get company metadata including symbol, company name, location, telephone number, etc.
         """
         self._check_and_delete_old_file(self.download_dir + "listedCompanies_en_US.xls")
-        self.browser.get("https://www.set.or.th/en/company/companylist.html")
-        sleep(1)
-        self.browser.find_element_by_xpath(
-            '//a[@href="/dat/eod/listedcompany/static/listedCompanies_en_US.xls"]').click()
-        sleep(1)
+#         self.browser.get("https://www.set.or.th/en/company/companylist.html")
+#         sleep(1)
+#         self.browser.find_element_by_xpath(
+# '//a[@href="/dat/eod/listedcompany/static/listedCompanies_en_US.xls"]').click()
+#         sleep(1)
+        urllib.request.urlretrieve("https://www.set.or.th/dat/eod/listedcompany/static/listedCompanies_en_US.xls", self.download_dir + "listedCompanies_en_US.xls")
         self._upload_file(self.download_dir + "listedCompanies_en_US.xls", "metadata.xls", "metadata",
                           firebase_dir="data/raw/set_website/")
         sleep(1)
@@ -75,11 +93,12 @@ class Set:
         Getting delisting company list
         """
         self._check_and_delete_old_file(self.download_dir + "delistedSecurities_en_US.xls")
-        self.browser.get("https://www.set.or.th/en/company/companylist.html")
-        sleep(1)
-        self.browser.find_element_by_xpath(
-            '//a[@href="/dat/eod/listedcompany/static/delistedSecurities_en_US.xls"]').click()
-        sleep(1)
+        # self.browser.get("https://www.set.or.th/en/company/companylist.html")
+        # sleep(1)
+        # self.browser.find_element_by_xpath(
+        #     '//a[@href="/dat/eod/listedcompany/static/delistedSecurities_en_US.xls"]').click()
+        # sleep(1)
+        urllib.request.urlretrieve("https://www.set.or.th/dat/eod/listedcompany/static/delistedSecurities_en_US.xls", self.download_dir + "delistedSecurities_en_US.xls")
         self._upload_file(self.download_dir + "delistedSecurities_en_US.xls", "delisted.xls", "delisted",
                           firebase_dir="data/raw/set_website/")
         sleep(1)

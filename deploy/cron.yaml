@@ -3,3 +3,6 @@ cron:
   url: /daily
   schedule: every monday,tuesday,wednesday,thursday,friday 19:00
   timezone: Asia/Bangkok
+  retry_parameters:
+    min_backoff_seconds: 3
+    max_doublings: 10

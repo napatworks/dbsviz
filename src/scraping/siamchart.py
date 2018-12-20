@@ -97,6 +97,7 @@ def run_scraping_job():
     df_meta = pd.read_csv(StringIO(meta_table_str), sep='|')
     tickers = list(df_meta['symbol'].unique())
 
+    # TODO Change dateformatter to config file
     today_str = dt.date.today().strftime(format='%Y%m%d')
     output_dir = 'data/raw/siamchart/' + today_str + '/'
 
@@ -128,8 +129,8 @@ def run_scraping_job():
                     print(ticker, ': Number of tables ', len(table_list))
                     print(ticker, ': Number of quarters ', num_quarter)
 
-                    # Try relogin in case of session timeout
-                    if num_quarter <= 5 and not try_relogin:
+                    # Try re-login in case of session timeout
+                    if num_quarter <= 6 and not try_relogin:
                         try:
                             ss.login_to_siamchart(username=username, password=password)
                         except:
@@ -154,6 +155,7 @@ def run_scraping_job():
         tickers_left = sorted(set(tickers_left) - set(tickers_loaded))
         num_round += 1
 
-if __name__ =='__main__':
+
+if __name__ == '__main__':
     run_scraping_job()
 

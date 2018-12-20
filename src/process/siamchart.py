@@ -14,6 +14,44 @@ class SiamchartProcessor:
     SIAMCHART_FINANCIAL_TABLE = 3
     SIAMCHART_SPLIT_TABLE = 2
 
+    COLUMN_NAME_DICT = {'ราคาปิด': 'close_price',
+                       'รวมรายได้': 'revenues',
+                       'รวมค่าใช้จ่าย': 'expenses',
+                       'กำไรขั้นต้น': 'gross_profit',
+                       'กำไรจากการดำเนินงาน': 'operating_profit',
+                       'EBIT': 'ebit',
+                       'EBITDA': 'ebitda',
+                       'กำไรสุทธิ': 'net_income',
+                       'เงินสด': 'cash',
+                       'ลูกหนี้และตั๋วเงินรับ': 'account_receivable',
+                       'สินค้าคงเหลือ': 'inventory',
+                       'สินทรัพย์หมุนเวียน': 'current_asset',
+                       'ที่ดินอาคารและอุปกรณ์': 'property_plant_equipment',
+                       'รวมสินทรัพย์': 'total_asset',
+                       'เบิกเกินบัญชีและเงินกู้ยืม': 'short_term_loan',
+                       'เจ้าหนี้และตั๋วเงินจ่าย': 'account_payable',
+                       'หนี้สินระยะยาวครบในหนึ่งปี': 'current_portion_long_term_debt',
+                       'หนี้สินหมุนเวียน': 'current_liability',
+                       'หนี้สินไม่หมุนเวียน': 'non_current_liability',
+                       'รวมหนี้สิน': 'total_liability',
+                       'มูลค่าหุ้นที่เรียกชำระแล้ว': 'paid_in_capital',
+                       'รวมส่วนของผู้ถือหุ้น': 'total_equity',
+                       'เงินสดจากการดำเนินงาน': 'cashflow_operation',
+                       'เงินสดจากการลงทุน': 'cashflow_investment',
+                       'เงินสดจากการจัดหาเงิน': 'cashflow_financing',
+                       'ค่าเสื่อมราคาค่าตัดจำหน่าย': 'depreciation',
+                       'หนี้สูญและหนี้สงสัยจะสูญ': 'allowance_doubtful_accounts'}
+
+    RETURN_COLUMN = 'net_income'
+    EPS_COLUMN = 'eps'
+
+    SUBTRACT_COLUMNS = ['revenues', 'expenses', 'gross_profit', 'operating_profit',
+                     'ebit', 'ebitda', 'net_income', 'cashflow_operation',
+                     'cashflow_investment', 'cashflow_financing', 'depreciation',
+                     'dividend']
+    DIVIDE_COLUMNS = ['pe']
+    MULTIPLY_COLUMNS = ['roa', 'roaa', 'roe', 'roae', 'roce']
+
     def __init__(self, page_source, ticker):
 
         self.page_source = page_source
@@ -49,8 +87,10 @@ class SiamchartProcessor:
         dfDiv.sort_index(inplace=True)
         return dfDiv
 
-    @staticmethod
-    def _clean_financial_data(df):
+    def _clean_financial_data(self, df):
+
+        ## TODO Add sanity checker if all the target name are contained in API
+        ## TODO Move all the name adjustment from db-ingestion part to process part
 
         # load and store financial data
         df = df.apply(lambda x: x.map(lambda x: str(x).split('(')[0]))
@@ -72,68 +112,51 @@ class SiamchartProcessor:
         df.index = df.index.date
         df.sort_index(inplace=True)
 
-        # change column name
-        columnChangeMap = {'ราคาปิด': 'close_price',
-                           'รวมรายได้': 'revenue',
-                           'รวมค่าใช้จ่าย': 'expense',
-                           'กำไรขั้นต้น': 'gross_profit',
-                           'กำไรจากการดำเนินงาน': 'operating_profit',
-                           'EBIT': 'ebit',
-                           'EBITDA': 'ebitda',
-                           'กำไรสุทธิ': 'net_profit',
-                           'เงินสด': 'cash',
-                           'ลูกหนี้และตั๋วเงินรับ': 'account_receivable',
-                           'สินค้าคงเหลือ': 'inventory',
-                           'สินทรัพย์หมุนเวียน': 'current_asset',
-                           'ที่ดินอาคารและอุปกรณ์': 'property_plant_equipment',
-                           'รวมสินทรัพย์': 'total_asset',
-                           'เบิกเกินบัญชีและเงินกู้ยืม': 'short_term_loan',
-                           'เจ้าหนี้และตั๋วเงินจ่าย': 'account_payable',
-                           'หนี้สินระยะยาวครบในหนึ่งปี': 'current_portion_long_term_debt',
-                           'หนี้สินหมุนเวียน': 'current_liability',
-                           'หนี้สินไม่หมุนเวียน': 'non_current_liability',
-                           'รวมหนี้สิน': 'total_liability',
-                           'มูลค่าหุ้นที่เรียกชำระแล้ว': 'paid_in_capital',
-                           'รวมส่วนของผู้ถือหุ้น': 'total_equity',
-                           'เงินสดจากการดำเนินงาน': 'cash_flow_operation',
-                           'เงินสดจากการลงทุน': 'cash_flow_investment',
-                           'เงินสดจากการจัดหาเงิน': 'cash_flow_financing',
-                           'ค่าเสื่อมราคาค่าตัดจำหน่าย': 'depreciation',
-                           'หนี้สูญและหนี้สงสัยจะสูญ': 'allowance_doubtful_accounts'}
-        df.rename(columns=columnChangeMap, inplace=True)
+        # change column names, change to lowercase, replace invalidate character
+        df.rename(columns=SiamchartProcessor.COLUMN_NAME_DICT, inplace=True)
+        df.columns = [x.lower() for x in df.columns]
+        df.columns = self._replace_invalidate_character(df.columns, ['/', '%'])
+
         return df
 
-    @staticmethod
-    def adjust_quarterly_result(df, ticker):
-        #TODO Fix bug in adjust quarterly eps: see 2S for example. Bug is from computing numbershare when eps, net_profit are ttm
+    def _replace_invalidate_character(self, str_list, invalid_characters):
+        new_list = str_list.copy()
+        for c in invalid_characters:
+            new_list = [x.replace(c, '') for x in new_list]
+        return new_list
 
-        RETURN_COLUMN = 'net_profit'
-        EPS_COLUMN = 'EPS'
+    def adjust_quarterly_result(self, df, ticker):
+        # TODO Fix bug in adjust quarterly eps: see 2S for example.
+        # Bug is from computing number share when eps, net_profit are ttm
 
-        cols_subtract = ['revenue', 'expense', 'gross_profit', 'operating_profit',
-                         'ebit', 'ebitda', 'net_profit', 'cash_flow_operation',
-                         'cash_flow_investment', 'cash_flow_financing', 'depreciation',
-                         'dividend']
-        cols_divide = ['P/E']
-        cols_multiply = ['ROA%', 'ROAA%', 'ROE%', 'ROAE%', 'ROCE%']
+        # Warning: if do lower, can contain multiple 'eps' columns
 
-        all_cols = [EPS_COLUMN] + cols_subtract + cols_divide + cols_multiply
+        cols_subtract = SiamchartProcessor.SUBTRACT_COLUMNS
+        cols_divide = SiamchartProcessor.DIVIDE_COLUMNS
+        cols_multiply = SiamchartProcessor.MULTIPLY_COLUMNS
+        eps_col = SiamchartProcessor.EPS_COLUMN
+        ret_col = SiamchartProcessor.RETURN_COLUMN
+
+        ## Warning: This can created "quite" bug
+        all_cols = [eps_col] + cols_subtract + cols_divide + cols_multiply
+        df['dividend'] = 0
         for col in all_cols:
             if col not in df.columns:
                 print('Warning: essential column ', col, ' is missing. Assigning NaN.')
                 df[col] = np.NaN
 
         df.sort_index(inplace=True)
-        df['number_of_shares'] = df[RETURN_COLUMN] / df[EPS_COLUMN]
-        if 'DPS' in df.columns:
-            df['dividend'] = df['DPS'] * df['number_of_shares']
+        df['number_of_shares'] = df[ret_col] / df[eps_col]
+        if 'dps' in df.columns:
+            df['dividend'] = df['dps'] * df['number_of_shares']
         else:
             df['dividend'] = 0
-        df['return_old'] = df[RETURN_COLUMN]
+            df['dps'] = 0
+        df['return_old'] = df[ret_col]
 
         # ad-hoc adjustment for some ticker due to weird time-sync from siamchart
         first_quarter_month = 3
-        if ticker in ['AOT']:
+        if ticker.lower() in ['aot']:
             first_quarter_month = 12
 
         # coll
@@ -144,21 +167,23 @@ class SiamchartProcessor:
             else:
                 print('Warning: essential column ', col, ' is missing. Assigning NaN.')
                 df[col] = np.nan
-        df['eps'] = df['net_profit'] / df['number_of_shares']
+        df['eps_cum'] = df['eps']
+        df['dps_cum'] = df['dps']
+        df['eps'] = df['net_income'] / df['number_of_shares']
         df['dps'] = df['dividend'] / df['number_of_shares']
         del df['tmp']
 
         # correct pe ratio and related columns
         for col in cols_divide:
             if col in df.columns:
-                df[col] = df[col] * df['return_old'] / df[RETURN_COLUMN] / 4
+                df[col] = df[col] * df['return_old'] / df[ret_col] / 4
             else:
                 df[col] = np.nan
 
         # correct roe,roa and related stuff
         for col in cols_multiply:
             if col in df.columns:
-                df[col] = df[col] / df['return_old'] * df[RETURN_COLUMN] * 4
+                df[col] = df[col] / df['return_old'] * df[ret_col] * 4
             else:
                 df[col] = np.nan
 
@@ -174,8 +199,8 @@ def run_processing_data_job():
     firebase_admin.initialize_app(cred, {
         'storageBucket': 'dbsweb-f2346.appspot.com'
     })
-    path_dir = 'data/raw/siamchart/20181127/'
-    output_dir = 'data/process/siamchart/financial/20181127/'
+    path_dir = 'data/raw/siamchart/20181216/'
+    output_dir = 'data/process/siamchart/financial/20181216/'
     local_tmp_file = 'tmp.csv'
     bucket = storage.bucket()
     for blob in bucket.list_blobs(prefix=path_dir):
@@ -183,7 +208,7 @@ def run_processing_data_job():
         ticker = str(blob.name.split('/')[-1])
         sp = SiamchartProcessor(page_source, ticker)
         df_financial = sp.get_financial_data(raw=False, adjust_quarterly=True)
-        df_financial.to_csv(local_tmp_file)
+        df_financial.to_csv(local_tmp_file, sep='|')
         output_blob = bucket.blob(output_dir + ticker + '.csv')
         output_blob.upload_from_filename(local_tmp_file)
         print(ticker, ': Successfully upload file to cloud storage')

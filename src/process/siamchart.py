@@ -9,6 +9,7 @@ import os
 
 class SiamchartProcessor:
     ## TODO change from printing to logging
+    ## TODO add patch job for siamchart bug (eg. THIP)
 
     SIAMCHART_DIVIDEND_TABLE = 1
     SIAMCHART_FINANCIAL_TABLE = 3

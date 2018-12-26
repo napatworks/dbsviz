@@ -7,6 +7,8 @@ import pandas as pd
 import datetime as dt
 from io import StringIO
 
+import os
+
 class YahooStatsScraper:
     #TODO: refactor code to more robust to testing and changing (eg. remove hardcode date=today)
     #TODO: refactor code to decompose writing to firebase job and scraper job

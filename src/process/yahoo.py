@@ -12,6 +12,7 @@ import pandas as pd
 
 
 class Yahoo:
+    ## TODO: Change name to processor
     """
     Processing data from YAHOO Finance
     """

@@ -18,7 +18,9 @@ import firebase_admin
 import numpy as np
 import pandas as pd
 
-class Yahoo:
+class YahooScraper:
+    #TODO: refactor code to more robust to testing and changing (eg. remove hardcode date=today)
+    #TODO: refactor raw scraping, move processing stuff to process
     """
     Reading data from YAHOO Finance
     """
@@ -160,8 +162,9 @@ class Yahoo:
         self._upload_file("tmp_yahoo_error.json", "price_error_list.json", "price", firebase_dir="data/raw/yahoo/")
         self._check_and_delete_old_file("tmp_yahoo_error.json")
 
+
 def run(firebase_credential_path = "../../credential/dbsweb-secret.json", bucket = "dbsweb-f2346.appspot.com"):
-    scraper = Yahoo(firebase_credential_path = firebase_credential_path, bucket = bucket)
+    scraper = YahooScraper(firebase_credential_path = firebase_credential_path, bucket = bucket)
     scraper.scrape()
 
 if __name__ == "__main__":

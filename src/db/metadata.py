@@ -6,7 +6,7 @@ import pandas as pd
 import os
 
 
-class Metadata():
+class MetaData():
 
     item_cols = ['ticker', 'company', 'market', 'industry', 'country']
 
@@ -47,27 +47,31 @@ class Metadata():
         except:
             raise
 
-    def write_to_firebase(self, df, collection):
+    def write_to_firebase(self, df, collection, tickers=None):
         # change dataframe to json
-        cols = [x for x in Metadata.item_cols if x in df.columns]
+        cols = [x for x in MetaData.item_cols if x in df.columns]
         dic = df[cols].to_dict(orient='index')
         ## write to db
         for k, v in dic.items():
-            self.db.collection(collection).document(k).set(v)
+            self.db.collection(collection).document(k).set(v, merge=True)
 
-    def run(self, collection):
+    def run(self, collection, tickers=None):
         self._load_data()
         self._process_data()
-        self.write_to_firebase(self.table, collection)
+        if isinstance(tickers,list):
+            tickers = [x.lower() for x in tickers]
+            self.write_to_firebase(self.table[self.table.index.isin(tickers)], collection)
+        else:
+            self.write_to_firebase(self.table, collection)
 
 def run_ingestion_job():
-    dbwriter = Metadata()
+    dbwriter = MetaData()
     dbwriter.run(collection='stocks')
 
 def run_test():
-    dbwriter = Metadata()
-    dbwriter.run(collection='test_metadata')
+    dbwriter = MetaData()
+    dbwriter.run(collection='test', tickers=['cpall','hmpro','ptt'])
 
 if __name__=="__main__":
-    run_ingestion_job()
-    #run_test()
+    #run_ingestion_job()
+    run_test()

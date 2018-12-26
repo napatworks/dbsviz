@@ -4,3 +4,4 @@ credential
 src/process/__pycache__
 dbsviz
 src/db/__pycache__
+src/scraping/__pycache__

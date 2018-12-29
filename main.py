@@ -33,14 +33,27 @@ def run():
     s_set_website.run(chrome_driver_dir=chrome_driver_dir, download_dir=download_dir,
                       firebase_credential_path=firebase_credential_path, bucket=bucket)
     print("Finishing scrape SET data")
-    
-    print("Getting YAHOO data")
+    print("Processing SET data")
     p_set_website.run(firebase_credential_path=firebase_credential_path, bucket=bucket)
-    print("Finishing scrape YAHOO data")
+    print("Finishing process SET data")
 
     # Get Yahoo price data
+    print("Getting YAHOO data")
     s_yahoo.run(firebase_credential_path=firebase_credential_path, bucket=bucket)
+    print("Finishing scrape YAHOO data")
+    print("Processing YAHOO data")
     p_yahoo.run(firebase_credential_path=firebase_credential_path, bucket=bucket)
+    print("Finishing process YAHOO data")
+
+    # Factsheet data
+    print("Getting SET data")
+    s_set_website.run_factsheet(chrome_driver_dir=chrome_driver_dir, download_dir=download_dir,
+                      firebase_credential_path=firebase_credential_path, bucket=bucket)
+    print("Finishing scrape SET data")
+    print("Processing SET data")
+    p_set_website.run_factsheet(firebase_credential_path=firebase_credential_path, bucket=bucket)
+    print("Finishing process SET data")
+    
     return "Finish daily task"
 
 if __name__ == "__main__":

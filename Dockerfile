@@ -235,7 +235,7 @@ RUN cd lib/pandas_datareader \
 ADD src /src/
 ADD credential /credential/
 ADD *.py /
-ADD *.yaml /
+# ADD *.yaml /
 
 EXPOSE 8080
 

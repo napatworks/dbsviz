@@ -1,14 +1,18 @@
 # Scraping tools
 from selenium import webdriver
 import urllib.request
+import requests
 
 # Data management tools
 import pandas as pd
+import numpy as np
 
 # Basic tools
 from time import sleep
 import datetime as dt
 import os
+import copy
+import sys
 
 # Firebase
 import firebase_admin
@@ -64,6 +68,34 @@ class Set:
         output_dir = firebase_dir + data_type + "/" + today_str + "/"
         blob = bucket.blob(output_dir + file_name)
         blob.upload_from_filename(local_file_name)
+
+    def _read_gcs(self, file_name, data_type, file_type, firebase_dir="data/raw/yahoo/"):
+
+        # Reading files in the firebase storage
+        bucket = storage.bucket()
+        today_str = dt.date.today().strftime(format="%Y%m%d")
+        output_dir = firebase_dir + data_type + "/" + today_str + "/"
+        blob = bucket.blob(output_dir + file_name)
+        with open(file_name, 'wb') as file_obj:
+            blob.download_to_file(file_obj)
+        
+        # Read with pandas DataFrame
+        if file_type == "html":
+            df = pd.read_html(file_name)
+            self._check_and_delete_old_file(file_name)
+            return df
+        
+        if file_type == "csv":
+            df = pd.read_csv(file_name, sep="|")
+            self._check_and_delete_old_file(file_name)
+            return df
+
+    def get_thai_ticker_list(self):
+        """
+        Getting ticker data from metadata in SET website
+        """
+        df = self._read_gcs("metadata.csv", "metadata", "csv", firebase_dir="data/process/set_website/")
+        return np.array(df["symbol"].unique())
 
     def _check_and_delete_old_file(self, local_file_name):
         """
@@ -196,6 +228,54 @@ class Set:
         sleep(1)
         os.remove(self.download_dir + "setthsi_stocks.csv")
 
+    def _factsheet_get_page(self, symbol, user_agent=None, proxy=None):
+        """Getting company data through factsheet page"""
+        
+        # Case when user specify user_agent and proxy
+        if (user_agent is not None) & (proxy is not None):
+            headers = {
+                  'accept-encoding': 'gzip, deflate, br',
+                  'accept-language': 'en-US,en;q=0.9',
+                  'user-agent': user_agent,
+                  'accept': '*/*',
+                }
+            data = requests.get("https://www.set.or.th/set/factsheet.do?symbol={0}&ssoPageId=3&language=en&country=US".format(symbol.upper().replace("&", "%26")), 
+                                headers=headers, 
+                                proxies={"http": proxy, "https": proxy}).text
+        
+        elif (user_agent is not None) & (proxy is None):
+            headers = {
+                  'accept-encoding': 'gzip, deflate, br',
+                  'accept-language': 'en-US,en;q=0.9',
+                  'user-agent': user_agent,
+                  'accept': '*/*',
+                }
+
+            data = requests.get("https://www.set.or.th/set/factsheet.do?symbol={0}&ssoPageId=3&language=en&country=US".format(symbol.upper().replace("&", "%26")), 
+                                headers=headers).text
+        elif (user_agent is None) & (proxy is not None):
+            data = requests.get("https://www.set.or.th/set/factsheet.do?symbol={0}&ssoPageId=3&language=en&country=US".format(symbol.upper().replace("&", "%26")), 
+                                proxies={"http": proxy, "https": proxy}).text
+        else:
+            data = requests.get("https://www.set.or.th/set/factsheet.do?symbol={0}&ssoPageId=3&language=en&country=US".format(symbol.upper().replace("&", "%26"))).text
+        
+        return data
+
+    def get_factsheet_data(self):
+        symbol_list = self.get_thai_ticker_list()
+        progress_n = 0
+        for symbol in symbol_list:
+            data = self._factsheet_get_page(symbol.replace("&", "%26"))
+            progress_n += 1
+            sys.stdout.write("\rDownloading {0}/{1}".format(str(progress_n), str(len(symbol_list))))
+            sys.stdout.flush()
+            file = open(symbol+".txt","w") 
+            file.write(data)
+            file.close()
+            self._upload_file(self.download_dir + symbol + ".txt", symbol + ".txt", "factsheet",
+                          firebase_dir="data/raw/set_website/")
+            os.remove(self.download_dir + symbol + ".txt")
+
 
 def run(chrome_driver_dir="../../tools/chromedriver", download_dir="",
         firebase_credential_path="../../credential/dbsweb-secret.json", bucket="dbsweb-f2346.appspot.com"):
@@ -210,6 +290,11 @@ def run(chrome_driver_dir="../../tools/chromedriver", download_dir="",
     scraper.get_current_sset_stocks()
     scraper.get_current_setthsi_stocks()
 
+def run_factsheet(chrome_driver_dir="../../tools/chromedriver", download_dir="",
+        firebase_credential_path="../../credential/dbsweb-secret.json", bucket="dbsweb-f2346.appspot.com"):
+    scraper = Set(chrome_driver_dir, download_dir, firebase_credential_path=firebase_credential_path, bucket=bucket)
+    scraper.get_factsheet_data()
+
 
 if __name__ == "__main__":
-    run()
+    run_factsheet()

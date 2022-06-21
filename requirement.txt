@@ -17,7 +17,7 @@ idna==2.7
 lxml==4.2.5
 msgpack==0.6.0
 multitasking==0.0.7
-numpy==1.14.5
+numpy==1.22.0
 pandas==0.23.3
 protobuf==3.6.1
 pyasn1==0.4.4
